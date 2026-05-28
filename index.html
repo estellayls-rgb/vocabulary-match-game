@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-12" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>A2 Vocabulary Match</title>
   <style>
@@ -162,32 +162,9 @@
       opacity: 0.85;
     }
 
-    .word-btn.wrong {
-      animation: shake 0.4s ease;
-      border-color: var(--error);
-      background: #fef2f2;
-    }
-
     .word-btn:disabled {
       cursor: default;
     }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-6px); }
-      75% { transform: translateX(6px); }
-    }
-
-    .feedback {
-      text-align: center;
-      min-height: 1.5rem;
-      margin-top: 1rem;
-      font-weight: 600;
-      font-size: 1rem;
-    }
-
-    .feedback.ok { color: var(--success); }
-    .feedback.bad { color: var(--error); }
 
     .overlay {
       position: fixed;
@@ -212,7 +189,7 @@
       background: var(--card);
       border-radius: 20px;
       padding: 2rem;
-      max-width: 380px;
+      max-width: 420px;
       width: 100%;
       text-align: center;
       box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
@@ -241,6 +218,17 @@
       margin: 0.75rem 0 0.25rem;
     }
 
+    .result-card .level-display {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0.5rem 0;
+      padding: 0.5rem 1rem;
+      background: #fef3c7;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
     .result-card .score-detail {
       font-size: 1rem;
       color: var(--muted);
@@ -251,6 +239,7 @@
       color: var(--muted);
       margin-bottom: 1.25rem;
       line-height: 1.5;
+      font-size: 0.95rem;
     }
 
     .btn-primary {
@@ -278,33 +267,31 @@
     </header>
 
     <div class="stats">
-      <span class="stat">已配对：<strong id="matched-count">0</strong> / 12</span>
-      <span class="stat">正确：<strong id="correct-count">0</strong></span>
-      <span class="stat">尝试：<strong id="attempt-count">0</strong></span>
+      <span class="stat">已配对 Matched：<strong id="matched-count">0</strong> / 12</span>
+      <span class="stat">尝试 Done：<strong id="attempt-count">0</strong></span>
     </div>
 
     <div class="board">
       <div class="column">
-        <h2>English</h2>
+        <h2>Jenny Says</h2>
         <div class="word-list" id="english-list"></div>
       </div>
       <div class="column">
-        <h2>中文</h2>
+        <h2>意思 Meaning</h2>
         <div class="word-list" id="chinese-list"></div>
       </div>
     </div>
-
-    <p class="feedback" id="feedback" aria-live="polite"></p>
   </div>
 
   <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title">
     <div class="result-card">
       <div class="emoji" id="result-emoji">🎉</div>
-      <h2 id="result-title">游戏结束！</h2>
-      <p class="score-display" id="final-score">100</p>
-      <p id="score-detail">12 / 12 词对已配对</p>
-      <p id="result-message">太棒了！</p>
-      <button type="button" class="btn-primary" id="play-again">再玩一次</button>
+      <h2 id="result-title">游戏结束！Game Over!</h2>
+      <p class="score-display" id="final-score">12</p>
+      <p class="level-display" id="level-display">婴语十二级 Baby Tongue Level-12</p>
+      <p id="score-detail">12 / 12 词对已配对 Words Matched</p>
+      <p id="result-message"></p>
+      <button type="button" class="btn-primary" id="play-again">再玩一次 Replay</button>
     </div>
   </div>
 
@@ -332,7 +319,6 @@
 
     const englishList = document.getElementById("english-list");
     const chineseList = document.getElementById("chinese-list");
-    const feedbackEl = document.getElementById("feedback");
     const overlay = document.getElementById("overlay");
 
     function shuffle(arr) {
@@ -364,8 +350,6 @@
       correctAttempts = 0;
       totalAttempts = 0;
       updateStats();
-      feedbackEl.textContent = "";
-      feedbackEl.className = "feedback";
       overlay.classList.remove("show");
 
       const englishOrder = shuffle(PAIRS.map((_, i) => i));
@@ -390,7 +374,6 @@
 
     function updateStats() {
       document.getElementById("matched-count").textContent = matchedIds.size;
-      document.getElementById("correct-count").textContent = correctAttempts;
       document.getElementById("attempt-count").textContent = totalAttempts;
     }
 
@@ -398,7 +381,6 @@
       if (btn.classList.contains("matched") || btn.disabled) return;
 
       const side = btn.dataset.side;
-      const id = btn.dataset.id;
 
       if (side === "en") {
         if (selectedEnglish === btn) {
@@ -436,6 +418,7 @@
       updateStats();
 
       if (enId === zhId) {
+        /* 正确：标记为已配对 */
         correctAttempts++;
         matchedIds.add(enId);
         selectedEnglish.classList.remove("selected");
@@ -444,8 +427,6 @@
         selectedChinese.classList.add("matched");
         selectedEnglish.disabled = true;
         selectedChinese.disabled = true;
-        feedbackEl.textContent = "正确！✓";
-        feedbackEl.className = "feedback ok";
         selectedEnglish = null;
         selectedChinese = null;
         updateStats();
@@ -454,16 +435,13 @@
           setTimeout(showResults, 500);
         }
       } else {
-        feedbackEl.textContent = "再试一次～";
-        feedbackEl.className = "feedback bad";
-        selectedEnglish.classList.add("wrong");
-        selectedChinese.classList.add("wrong");
+        /* 错误：静默取消选中，不给任何提示 */
         const enBtn = selectedEnglish;
         const zhBtn = selectedChinese;
         setTimeout(() => {
-          enBtn.classList.remove("wrong", "selected");
-          zhBtn.classList.remove("wrong", "selected");
-        }, 450);
+          enBtn.classList.remove("selected");
+          zhBtn.classList.remove("selected");
+        }, 300);
         selectedEnglish = null;
         selectedChinese = null;
       }
@@ -472,33 +450,45 @@
     function computeScore() {
       const total = PAIRS.length;
       const wrongAttempts = totalAttempts - total;
-      return Math.max(0, 100 - wrongAttempts * 10);
+      /* 满分12分，每错一次扣1分，最低0分 */
+      return Math.max(0, total - wrongAttempts);
+    }
+
+    function getLevel(score) {
+      if (score === 12) return { level: "婴语十二级 · 母语级别 Baby Tongue Level 12 · Native Speaker", emoji: "🏆", bg: "#fef3c7" };
+      if (score >= 10) return { level: "婴语十级 · 高级 Baby Tongue Level 10 · Advanced", emoji: "🌟", bg: "#fef3c7" };
+      if (score >= 8)  return { level: "婴语八级 · 中级 Baby Tongue Level 8 · Intermediate", emoji: "👶", bg: "#e0f2fe" };
+      if (score >= 6)  return { level: "婴语六级 · 入门 Baby Tongue Level 6 · Beginner", emoji: "🍼", bg: "#fce7f3" };
+      if (score >= 4)  return { level: "婴语四级 · 初学者 Baby Tongue Level 4 · Novice", emoji: "😅", bg: "#fee2e2" };
+      return { level: "婴语零级 Baby Tongue Level 0", emoji: "🫣", bg: "#fee2e2" };
     }
 
     function showResults() {
       const total = PAIRS.length;
-      const points = computeScore();
+      const score = computeScore();
+      const { level, emoji, bg } = getLevel(score);
+
       const scoreEl = document.getElementById("final-score");
       const detailEl = document.getElementById("score-detail");
       const msgEl = document.getElementById("result-message");
       const emojiEl = document.getElementById("result-emoji");
+      const levelEl = document.getElementById("level-display");
 
-      scoreEl.textContent = `${points} 分`;
-      detailEl.textContent = `${total} / ${total} 词对已配对 · ${totalAttempts} 次点击`;
+      emojiEl.textContent = emoji;
+      scoreEl.textContent = `${score} / ${total} 分`;
+      levelEl.textContent = level;
+      levelEl.style.background = bg;
+      detailEl.textContent = `共尝试 Total Attempts ${totalAttempts} 次`;
 
       let message;
-      if (totalAttempts === total) {
-        message = "一次都没错，太厉害了！";
-        emojiEl.textContent = "🏆";
-      } else if (points >= 80) {
-        message = "做得很好，继续加油！";
-        emojiEl.textContent = "🌟";
-      } else if (points >= 50) {
-        message = "不错！多玩几次会更熟悉这些词。";
-        emojiEl.textContent = "💪";
+      if (score === 12) {
+        message = "一次都没错！Jenny 封你为首席翻译官！Perfect score! Jenny crowns you Chief Translator!";
+      } else if (score >= 10) {
+        message = "很厉害！Jenny 对你表示认可。Impressive! Jenny approves.";
+      } else if (score >= 8) {
+        message = "不错不错，基本听懂 Jenny 在说什么了。Not bad! You mostly understand what Jenny's saying.";
       } else {
-        message = "别灰心，再试一次会更好！";
-        emojiEl.textContent = "📚";
+        message = "你该重修婴语啦！You need to re-take Jenny's language course!";
       }
       msgEl.textContent = message;
       overlay.classList.add("show");
