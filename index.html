@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A2 词汇配对游戏</title>
+  <style>
+    :root {
+      --bg: #fff0f5;
+      --card: #ffffff;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --success: #22c55e;
+      --error: #ef4444;
+      --muted: #64748b;
+      --text: #1e293b;
+      --border: #e2e8f0;
+      --shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background-color: #ffe8f0;
+      background-image: linear-gradient(
+        165deg,
+        #ffd6e8 0%,
+        #fff0f5 35%,
+        #fce7f3 70%,
+        #ffe4ec 100%
+      );
+      min-height: 100vh;
+      color: var(--text);
+      padding: 1.5rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: min(85vw, 480px);
+      height: min(85vw, 480px);
+      transform: translate(-50%, -52%);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23f9a8d4' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      opacity: 0.22;
+      filter: blur(1px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--card);
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      font-size: 0.9rem;
+    }
+
+    .stat strong {
+      color: var(--primary);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 600px) {
+      .board {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .column h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+
+    .word-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .word-btn {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      text-align: center;
+      box-shadow: var(--shadow);
+      color: var(--text);
+    }
+
+    .word-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .word-btn.selected {
+      border-color: var(--primary);
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    .word-btn.matched {
+      border-color: var(--success);
+      background: #f0fdf4;
+      color: #166534;
+      cursor: default;
+      opacity: 0.85;
+    }
+
+    .word-btn.wrong {
+      animation: shake 0.4s ease;
+      border-color: var(--error);
+      background: #fef2f2;
+    }
+
+    .word-btn:disabled {
+      cursor: default;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    .feedback {
+      text-align: center;
+      min-height: 1.5rem;
+      margin-top: 1rem;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .feedback.ok { color: var(--success); }
+    .feedback.bad { color: var(--error); }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    .overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .result-card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+      transform: scale(0.9);
+      transition: transform 0.3s;
+    }
+
+    .overlay.show .result-card {
+      transform: scale(1);
+    }
+
+    .result-card .emoji {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-card .score-display {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 0.75rem 0 0.25rem;
+    }
+
+    .result-card .score-detail {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .result-card #result-message {
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>蓁仔的语言世界</h1>
+      <p>连连看~蓁仔在说什么？</p>
+    </header>
+
+    <div class="stats">
+      <span class="stat">已配对：<strong id="matched-count">0</strong> / 8</span>
+      <span class="stat">正确：<strong id="correct-count">0</strong></span>
+      <span class="stat">尝试：<strong id="attempt-count">0</strong></span>
+    </div>
+
+    <div class="board">
+      <div class="column">
+        <h2>English</h2>
+        <div class="word-list" id="english-list"></div>
+      </div>
+      <div class="column">
+        <h2>中文</h2>
+        <div class="word-list" id="chinese-list"></div>
+      </div>
+    </div>
+
+    <p class="feedback" id="feedback" aria-live="polite"></p>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="result-card">
+      <div class="emoji" id="result-emoji">🎉</div>
+      <h2 id="result-title">游戏结束！</h2>
+      <p class="score-display" id="final-score">100</p>
+      <p id="score-detail">8 / 8 词对已配对</p>
+      <p id="result-message">太棒了！</p>
+      <button type="button" class="btn-primary" id="play-again">再玩一次</button>
+    </div>
+  </div>
+
+  <script>
+    const PAIRS = [
+      { en: "wo-wo", zh: "月亮" },
+      { en: "si-si", zh: "星星" },
+      { en: "ji-ji", zh: "鸡" },
+      { en: "ga-ga", zh: "鸭子" },
+      { en: "wang-wang", zh: "狗" },
+      { en: "pao-pao", zh: "怕" },
+      { en: "bei", zh: "不" },
+      { en: "wa-wa", zh: "小铲子" },
+    ];
+
+    let selectedEnglish = null;
+    let selectedChinese = null;
+    let matchedIds = new Set();
+    let correctAttempts = 0;
+    let totalAttempts = 0;
+
+    const englishList = document.getElementById("english-list");
+    const chineseList = document.getElementById("chinese-list");
+    const feedbackEl = document.getElementById("feedback");
+    const overlay = document.getElementById("overlay");
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function createButton(text, side, id) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "word-btn";
+      btn.textContent = text;
+      btn.dataset.side = side;
+      btn.dataset.id = id;
+      btn.addEventListener("click", () => onWordClick(btn));
+      return btn;
+    }
+
+    function renderBoard() {
+      englishList.innerHTML = "";
+      chineseList.innerHTML = "";
+      selectedEnglish = null;
+      selectedChinese = null;
+      matchedIds = new Set();
+      correctAttempts = 0;
+      totalAttempts = 0;
+      updateStats();
+      feedbackEl.textContent = "";
+      feedbackEl.className = "feedback";
+      overlay.classList.remove("show");
+
+      const englishOrder = shuffle(PAIRS.map((_, i) => i));
+      const chineseOrder = shuffle(PAIRS.map((_, i) => i));
+
+      englishOrder.forEach((id) => {
+        englishList.appendChild(createButton(PAIRS[id].en, "en", id));
+      });
+
+      chineseOrder.forEach((id) => {
+        chineseList.appendChild(createButton(PAIRS[id].zh, "zh", id));
+      });
+    }
+
+    function clearSelection() {
+      document.querySelectorAll(".word-btn.selected").forEach((el) => {
+        el.classList.remove("selected");
+      });
+      selectedEnglish = null;
+      selectedChinese = null;
+    }
+
+    function updateStats() {
+      document.getElementById("matched-count").textContent = matchedIds.size;
+      document.getElementById("correct-count").textContent = correctAttempts;
+      document.getElementById("attempt-count").textContent = totalAttempts;
+    }
+
+    function onWordClick(btn) {
+      if (btn.classList.contains("matched") || btn.disabled) return;
+
+      const side = btn.dataset.side;
+      const id = btn.dataset.id;
+
+      if (side === "en") {
+        if (selectedEnglish === btn) {
+          btn.classList.remove("selected");
+          selectedEnglish = null;
+          return;
+        }
+        document.querySelectorAll('[data-side="en"].selected').forEach((el) => {
+          el.classList.remove("selected");
+        });
+        btn.classList.add("selected");
+        selectedEnglish = btn;
+      } else {
+        if (selectedChinese === btn) {
+          btn.classList.remove("selected");
+          selectedChinese = null;
+          return;
+        }
+        document.querySelectorAll('[data-side="zh"].selected').forEach((el) => {
+          el.classList.remove("selected");
+        });
+        btn.classList.add("selected");
+        selectedChinese = btn;
+      }
+
+      if (selectedEnglish && selectedChinese) {
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      const enId = selectedEnglish.dataset.id;
+      const zhId = selectedChinese.dataset.id;
+      totalAttempts++;
+      updateStats();
+
+      if (enId === zhId) {
+        correctAttempts++;
+        matchedIds.add(enId);
+        selectedEnglish.classList.remove("selected");
+        selectedChinese.classList.remove("selected");
+        selectedEnglish.classList.add("matched");
+        selectedChinese.classList.add("matched");
+        selectedEnglish.disabled = true;
+        selectedChinese.disabled = true;
+        feedbackEl.textContent = "正确！✓";
+        feedbackEl.className = "feedback ok";
+        selectedEnglish = null;
+        selectedChinese = null;
+        updateStats();
+
+        if (matchedIds.size === PAIRS.length) {
+          setTimeout(showResults, 500);
+        }
+      } else {
+        feedbackEl.textContent = "再试一次～";
+        feedbackEl.className = "feedback bad";
+        selectedEnglish.classList.add("wrong");
+        selectedChinese.classList.add("wrong");
+        const enBtn = selectedEnglish;
+        const zhBtn = selectedChinese;
+        setTimeout(() => {
+          enBtn.classList.remove("wrong", "selected");
+          zhBtn.classList.remove("wrong", "selected");
+        }, 450);
+        selectedEnglish = null;
+        selectedChinese = null;
+      }
+    }
+
+    function computeScore() {
+      const total = PAIRS.length;
+      const wrongAttempts = totalAttempts - total;
+      return Math.max(0, 100 - wrongAttempts * 10);
+    }
+
+    function showResults() {
+      const total = PAIRS.length;
+      const points = computeScore();
+      const scoreEl = document.getElementById("final-score");
+      const detailEl = document.getElementById("score-detail");
+      const msgEl = document.getElementById("result-message");
+      const emojiEl = document.getElementById("result-emoji");
+
+      scoreEl.textContent = `${points} 分`;
+      detailEl.textContent = `${total} / ${total} 词对已配对 · ${totalAttempts} 次点击`;
+
+      let message;
+      if (totalAttempts === total) {
+        message = "一次都没错，太厉害了！";
+        emojiEl.textContent = "🏆";
+      } else if (points >= 80) {
+        message = "做得很好，继续加油！";
+        emojiEl.textContent = "🌟";
+      } else if (points >= 50) {
+        message = "不错！多玩几次会更熟悉这些词。";
+        emojiEl.textContent = "💪";
+      } else {
+        message = "别灰心，再试一次会更好！";
+        emojiEl.textContent = "📚";
+      }
+      msgEl.textContent = message;
+      overlay.classList.add("show");
+    }
+
+    document.getElementById("play-again").addEventListener("click", renderBoard);
+    renderBoard();
+  </script>
+</body>
+</html>
